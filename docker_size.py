@@ -43,6 +43,8 @@ for layer in history_json:
         layer_buckets_label_size["code"] += val
     elif re.search("bundle install", layer["CreatedBy"]):
         layer_buckets_label_size["gems"] += val
+    elif re.search("COPY /var/www/discourse/vendor/bundle", layer["CreatedBy"]):
+        layer_buckets_label_size["gems"] += val
     elif re.search("apt-get -y install .* sudo", layer["CreatedBy"]):
         layer_buckets_label_size["libraries"] += val
     elif re.search("rustArch", layer["CreatedBy"]):
