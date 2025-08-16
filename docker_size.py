@@ -17,13 +17,13 @@ def autopct_format(values):
 def make_chart(layer_buckets_label_size, total_image_size):
     layer_labels = layer_buckets_label_size.keys()
     layer_sizes = layer_buckets_label_size.values()
+    layer_mb = [value / BYTES_TO_MB for value in layer_sizes]
 
     layer_size_label = int(round(total_image_size/BYTES_TO_MB))
 
-    # Create the pie chart
-    fig, ax = plt.subplots(figsize=(8, 8)) # You can adjust the figure size as needed
-    ax.pie(layer_sizes, labels=layer_labels, autopct=autopct_format(layer_sizes), startangle=90)
-    ax.axis('equal') # Ensures the pie chart is circular
+    # Create the bar chart
+    plt.bar(layer_labels, layer_mb)
+    plt.ylabel('Size in MB')
     plt.title('Docker Image Layer Sizes: {v:d}MB'.format(v=layer_size_label))
     plt.show()
 
@@ -52,4 +52,5 @@ for layer in history_json:
 
 # zero values cannot be displayed
 filtered_layer_buckets = {k: v for k, v in layer_buckets_label_size.items() if v > 0}
+filtered_layer_buckets = dict(reversed(sorted(filtered_layer_buckets.items(), key=lambda item: item[1])))
 make_chart(filtered_layer_buckets, total_image_size)
