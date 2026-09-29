@@ -63,6 +63,7 @@ def make_chart(images):
 #    # Create the bar chart
 #    plt.bar(layer_labels, layer_mb)
     plt.ylabel('Size in MB')
+    plt.xticks(rotation=0, ha='right')
 #    plt.title('Total: {v:d}MB'.format(v=layer_size_label))
     plt.show()
 
@@ -113,6 +114,6 @@ def collect_layer_details(image_name):
 image_name_1 = sys.argv[1]
 image_name_2 = sys.argv[2]
 
-images = [{"name": image_name_1, "data": collect_layer_details(image_name_1)},
-          {"name": image_name_2, "data": collect_layer_details(image_name_2)}]
+images = [{"name": "web-only", "data": collect_layer_details(image_name_1)},
+          {"name": "slim", "data": collect_layer_details(image_name_2)}]
 make_chart(images)
