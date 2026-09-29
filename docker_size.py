@@ -31,7 +31,7 @@ image_name = sys.argv[1]
 history_output = '['+subprocess.check_output(["docker", "history", "--no-trunc", "--format=json", "--human=false", image_name]).decode("utf-8").replace("\n", ",\n").strip(",\n")+']'
 history_json = json.loads(history_output)
 
-layer_buckets_label_size = {"node_modules": 0, "gems": 0, "libraries": 0, "code": 0, "ruby": 0, "code_copy": 0, "redis_pg": 0, "runtime_deps": 0, "buildtime_deps": 0, "pups_run": 0, "other": 0}
+layer_buckets_label_size = {"node_modules": 0, "libraries": 0, "code_gems": 0, "ruby": 0, "redis_pg": 0, "runtime_deps": 0, "buildtime_deps": 0, "pups_run": 0, "other": 0}
 
 total_image_size = 0
 for layer in history_json:
@@ -40,17 +40,17 @@ for layer in history_json:
     if re.search("pnpm install", layer["CreatedBy"]):
         layer_buckets_label_size["node_modules"] += val
     elif re.search("git clone .* https://github.com/discourse/discourse.git", layer["CreatedBy"]):
-        layer_buckets_label_size["code"] += val
+        layer_buckets_label_size["code_gems"] += val
     elif re.search("bundle install", layer["CreatedBy"]):
-        layer_buckets_label_size["gems"] += val
+        layer_buckets_label_size["code_gems"] += val
     elif re.search("COPY /var/www/discourse/vendor/bundle", layer["CreatedBy"]):
-        layer_buckets_label_size["gems"] += val
+        layer_buckets_label_size["code_gems"] += val
     elif re.search("apt-get -y install .* sudo", layer["CreatedBy"]):
         layer_buckets_label_size["runtime_deps"] += val
     elif re.search("rustArch", layer["CreatedBy"]):
         layer_buckets_label_size["ruby"] += val
     elif re.search("COPY --chown=discourse:discourse /var/www/discourse/ /var/www/discourse", layer["CreatedBy"]):
-        layer_buckets_label_size["code_copy"] += val
+        layer_buckets_label_size["code_gems"] += val
     elif re.search("COPY --chown=discourse:discourse(.*)node_modules", layer["CreatedBy"]):
         layer_buckets_label_size["node_modules"] += val
     elif re.search("apt-get -y install redis", layer["CreatedBy"]):
@@ -63,9 +63,7 @@ for layer in history_json:
         layer_buckets_label_size["runtime_deps"] += val
     elif re.search("nginx-light", layer["CreatedBy"]) or re.search("locale-gen", layer["CreatedBy"]):
         layer_buckets_label_size["runtime_deps"] += val
-    elif re.search("pups --skip-tags=precompile,migrate,db", layer["CreatedBy"]):
-        layer_buckets_label_size["pups_run"] += val
-    elif re.search("pups --skip-tags=build,precompile,migrate,db", layer["CreatedBy"]):
+    elif re.search("pups --skip-tags", layer["CreatedBy"]):
         layer_buckets_label_size["pups_run"] += val
 
     else:
