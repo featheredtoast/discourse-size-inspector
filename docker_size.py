@@ -17,17 +17,19 @@ def autopct_format(values):
     return my_format
 
 def get_image_details(image):
+    layer_size_label = int(round(image["data"]["total"]/BYTES_TO_MB))
+    size_label = '{v:d}MB'.format(v=layer_size_label)
     return [
-        image["name"],
-        image["data"]["breakdown"]["node_modules"],
-        image["data"]["breakdown"]["libraries"],
-        image["data"]["breakdown"]["code_gems"],
-        image["data"]["breakdown"]["ruby"],
-        image["data"]["breakdown"]["redis_pg"],
-        image["data"]["breakdown"]["runtime_deps"],
-        image["data"]["breakdown"]["buildtime_deps"],
-        image["data"]["breakdown"]["pups_run"],
-        image["data"]["breakdown"]["other"],
+        image["name"]+" "+size_label,
+        image["data"]["breakdown"]["node_modules"] / BYTES_TO_MB,
+        image["data"]["breakdown"]["libraries"] / BYTES_TO_MB,
+        image["data"]["breakdown"]["code_gems"] / BYTES_TO_MB,
+        image["data"]["breakdown"]["ruby"] / BYTES_TO_MB,
+        image["data"]["breakdown"]["redis_pg"] / BYTES_TO_MB,
+        image["data"]["breakdown"]["runtime_deps"] / BYTES_TO_MB,
+        image["data"]["breakdown"]["buildtime_deps"] / BYTES_TO_MB,
+        image["data"]["breakdown"]["pups_run"] / BYTES_TO_MB,
+        image["data"]["breakdown"]["other"] / BYTES_TO_MB,
     ]
 
 def make_chart(images):
@@ -51,7 +53,7 @@ def make_chart(images):
 
     # plot data in stack manner of bar type
     df.plot(x='image', kind='bar', stacked=True,
-        title='Stacked Bar Graph by dataframe')
+        title='image size comparison')
 #    layer_labels = layer_buckets_label_size.keys()
 #    layer_sizes = layer_buckets_label_size.values()
 #    layer_mb = [value / BYTES_TO_MB for value in layer_sizes]
@@ -60,7 +62,7 @@ def make_chart(images):
 #
 #    # Create the bar chart
 #    plt.bar(layer_labels, layer_mb)
-#    plt.ylabel('Size in MB')
+    plt.ylabel('Size in MB')
 #    plt.title('Total: {v:d}MB'.format(v=layer_size_label))
     plt.show()
 
