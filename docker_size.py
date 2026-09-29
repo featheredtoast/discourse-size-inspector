@@ -24,14 +24,14 @@ def make_chart(layer_buckets_label_size, total_image_size):
     # Create the bar chart
     plt.bar(layer_labels, layer_mb)
     plt.ylabel('Size in MB')
-    plt.title('Docker Image Layer Sizes: {v:d}MB'.format(v=layer_size_label))
+    plt.title('Total: {v:d}MB'.format(v=layer_size_label))
     plt.show()
 
 image_name = sys.argv[1]
 history_output = '['+subprocess.check_output(["docker", "history", "--no-trunc", "--format=json", "--human=false", image_name]).decode("utf-8").replace("\n", ",\n").strip(",\n")+']'
 history_json = json.loads(history_output)
 
-layer_buckets_label_size = {"other": 0, "node_modules": 0, "code": 0, "gems": 0, "ruby": 0, "libraries": 0}
+layer_buckets_label_size = {"node_modules": 0, "gems": 0, "libraries": 0, "code": 0, "ruby": 0, "code_copy": 0, "redis_pg": 0, "runtime_deps": 0, "buildtime_deps": 0, "pups_run": 0, "other": 0}
 
 total_image_size = 0
 for layer in history_json:
@@ -46,13 +46,32 @@ for layer in history_json:
     elif re.search("COPY /var/www/discourse/vendor/bundle", layer["CreatedBy"]):
         layer_buckets_label_size["gems"] += val
     elif re.search("apt-get -y install .* sudo", layer["CreatedBy"]):
-        layer_buckets_label_size["libraries"] += val
+        layer_buckets_label_size["runtime_deps"] += val
     elif re.search("rustArch", layer["CreatedBy"]):
         layer_buckets_label_size["ruby"] += val
+    elif re.search("COPY --chown=discourse:discourse /var/www/discourse/ /var/www/discourse", layer["CreatedBy"]):
+        layer_buckets_label_size["code_copy"] += val
+    elif re.search("COPY --chown=discourse:discourse(.*)node_modules", layer["CreatedBy"]):
+        layer_buckets_label_size["node_modules"] += val
+    elif re.search("apt-get -y install redis", layer["CreatedBy"]):
+        layer_buckets_label_size["redis_pg"] += val
+    elif re.search("postgresql-", layer["CreatedBy"]):
+        layer_buckets_label_size["redis_pg"] += val
+    elif re.search("cmake", layer["CreatedBy"]) or re.search("npm install -g pnpm", layer["CreatedBy"]):
+        layer_buckets_label_size["buildtime_deps"] += val
+    elif re.search("gnupg", layer["CreatedBy"]):
+        layer_buckets_label_size["runtime_deps"] += val
+    elif re.search("nginx-light", layer["CreatedBy"]) or re.search("locale-gen", layer["CreatedBy"]):
+        layer_buckets_label_size["runtime_deps"] += val
+    elif re.search("pups --skip-tags=precompile,migrate,db", layer["CreatedBy"]):
+        layer_buckets_label_size["pups_run"] += val
+    elif re.search("pups --skip-tags=build,precompile,migrate,db", layer["CreatedBy"]):
+        layer_buckets_label_size["pups_run"] += val
+
     else:
+        print(layer["CreatedBy"])
         layer_buckets_label_size["other"] += val
 
 # zero values cannot be displayed
 filtered_layer_buckets = {k: v for k, v in layer_buckets_label_size.items() if v > 0}
-filtered_layer_buckets = dict(reversed(sorted(filtered_layer_buckets.items(), key=lambda item: item[1])))
 make_chart(filtered_layer_buckets, total_image_size)
