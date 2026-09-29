@@ -38,7 +38,7 @@ def make_chart(images):
                       "image",
                       "node_modules",
                       "libraries",
-                      "code_gems"
+                      "code_gems",
                       "ruby",
                       "redis_pg",
                       "runtime_deps",
