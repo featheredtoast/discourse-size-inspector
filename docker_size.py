@@ -17,35 +17,37 @@ def autopct_format(values):
     return my_format
 
 def get_image_details(image):
-    layer_size_label = int(round(image["data"]["total"]/BYTES_TO_MB))
+    layer_size_label = image["data"]["total"]
     size_label = '{v:d}MB'.format(v=layer_size_label)
     return [
         image["name"]+" "+size_label,
-        image["data"]["breakdown"]["node_modules"] / BYTES_TO_MB,
-        image["data"]["breakdown"]["libraries"] / BYTES_TO_MB,
-        image["data"]["breakdown"]["code_gems"] / BYTES_TO_MB,
-        image["data"]["breakdown"]["ruby"] / BYTES_TO_MB,
-        image["data"]["breakdown"]["redis_pg"] / BYTES_TO_MB,
-        image["data"]["breakdown"]["runtime_deps"] / BYTES_TO_MB,
-        image["data"]["breakdown"]["buildtime_deps"] / BYTES_TO_MB,
-        image["data"]["breakdown"]["pups_run"] / BYTES_TO_MB,
-        image["data"]["breakdown"]["other"] / BYTES_TO_MB,
+        image["data"]["breakdown"]["ruby"],
+        image["data"]["breakdown"]["runtime_deps"],
+        image["data"]["breakdown"]["code_gems"],
+        image["data"]["breakdown"]["buildtime_deps"],
+        image["data"]["breakdown"]["node_modules"],
+        image["data"]["breakdown"]["redis"],
+        image["data"]["breakdown"]["postgres"],
+        image["data"]["breakdown"]["pups_run"],
+        image["data"]["breakdown"]["other"],
     ]
 
 def make_chart(images):
-    print(get_image_details(images[0]))
-    print(get_image_details(images[1]))
-    df = pd.DataFrame([get_image_details(images[0]), get_image_details(images[1])],
+    df = pd.DataFrame([
+        get_image_details(images[0]),
+        get_image_details(images[1]),
+        get_image_details(images[2]),
+    ],
                   columns=[
                       "image",
-                      "node_modules",
-                      "libraries",
-                      "code_gems",
                       "ruby",
-                      "redis_pg",
-                      "runtime_deps",
-                      "buildtime_deps",
-                      "pups_run",
+                      "runtime deps",
+                      "code+gems",
+                      "buildtime deps",
+                      "node modules",
+                      "redis",
+                      "postgres",
+                      "pups run",
                       "other",
                   ])
     # view data
@@ -71,11 +73,11 @@ def collect_layer_details(image_name):
     history_output = '['+subprocess.check_output(["docker", "history", "--no-trunc", "--format=json", "--human=false", image_name]).decode("utf-8").replace("\n", ",\n").strip(",\n")+']'
     history_json = json.loads(history_output)
 
-    layer_buckets_label_size = {"node_modules": 0, "libraries": 0, "code_gems": 0, "ruby": 0, "redis_pg": 0, "runtime_deps": 0, "buildtime_deps": 0, "pups_run": 0, "other": 0}
+    layer_buckets_label_size = {"node_modules": 0, "code_gems": 0, "ruby": 0, "redis": 0, "postgres": 0, "runtime_deps": 0, "buildtime_deps": 0, "pups_run": 0, "other": 0}
 
     total_image_size = 0
     for layer in history_json:
-        val = int(layer["Size"])
+        val = int(layer["Size"]) / BYTES_TO_MB
         total_image_size += val
         if re.search("pnpm install", layer["CreatedBy"]):
             layer_buckets_label_size["node_modules"] += val
@@ -94,9 +96,9 @@ def collect_layer_details(image_name):
         elif re.search("COPY --chown=discourse:discourse(.*)node_modules", layer["CreatedBy"]):
             layer_buckets_label_size["node_modules"] += val
         elif re.search("apt-get -y install redis", layer["CreatedBy"]):
-            layer_buckets_label_size["redis_pg"] += val
+            layer_buckets_label_size["redis"] += val
         elif re.search("postgresql-", layer["CreatedBy"]):
-            layer_buckets_label_size["redis_pg"] += val
+            layer_buckets_label_size["postgres"] += val
         elif re.search("cmake", layer["CreatedBy"]) or re.search("npm install -g pnpm", layer["CreatedBy"]):
             layer_buckets_label_size["buildtime_deps"] += val
         elif re.search("gnupg", layer["CreatedBy"]):
@@ -108,12 +110,16 @@ def collect_layer_details(image_name):
         else:
             #print(layer["CreatedBy"])
             layer_buckets_label_size["other"] += val
-    return {"total": total_image_size, "breakdown": layer_buckets_label_size}
+    return {"total": int(round(total_image_size)), "breakdown": layer_buckets_label_size}
 
 
 image_name_1 = sys.argv[1]
 image_name_2 = sys.argv[2]
+image_name_3 = sys.argv[3]
 
-images = [{"name": "web-only", "data": collect_layer_details(image_name_1)},
-          {"name": "slim", "data": collect_layer_details(image_name_2)}]
+images = [
+    {"name": "full", "data": collect_layer_details(image_name_1)},
+    {"name": "web-only", "data": collect_layer_details(image_name_2)},
+    {"name": "slim", "data": collect_layer_details(image_name_3)},
+]
 make_chart(images)
